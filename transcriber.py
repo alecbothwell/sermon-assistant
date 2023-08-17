@@ -1,38 +1,34 @@
-import config
+# transcriber.py
 import whisper
-import os, glob
+import os
+import glob
+import config
 
-# find most recent files in a directory
-recordings_dir = os.path.join('recordings', '*')
-
-model = whisper.load_model("base")
-
-# list to store which wav files have been transcribed
-transcribed = []
-
-while True:
-    # get most recent wav recording in the recordings directory
+def transcribe_latest_audio(model, transcribed_list):
+    # Get most recent wav recording in the recordings directory
+    recordings_dir = os.path.join('recordings', '*')
     files = sorted(glob.iglob(recordings_dir), key=os.path.getctime, reverse=True)
+    
     if len(files) < 1:
-        continue
+        return
     
     latest_recording = files[0]
-    latest_recording_filename = latest_recording.split('/')[1]
 
-    if os.path.exists(latest_recording) and not latest_recording in transcribed:
+    if os.path.exists(latest_recording) and latest_recording not in transcribed_list:
+        print(latest_recording)
         audio = whisper.load_audio(latest_recording)
         audio = whisper.pad_or_trim(audio)
         mel = whisper.log_mel_spectrogram(audio).to(model.device)
-        options = whisper.DecodingOptions(language= 'en', fp16=False)
+        options = whisper.DecodingOptions(language='en', fp16=False)
 
         result = whisper.decode(model, mel, options)
 
         if result.no_speech_prob < 0.5:
             print(result.text)
 
-            # append text to transcript file
+            # Append text to transcript file
             with open(config.TRANSCRIPT_FILE, 'a') as f:
-                f.write(result.text)
+                f.write(result.text + '\n')
         
-            # save list of transcribed recordings so that we don't transcribe the same one again
-            transcribed.append(latest_recording)
+            # Save list of transcribed recordings
+            transcribed_list.append(latest_recording)

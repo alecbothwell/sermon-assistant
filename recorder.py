@@ -1,22 +1,23 @@
+# recorder.py
 import sounddevice as sd
-import wavio as wv
+from scipy.io import wavfile
 import datetime
+import numpy as np
+import re
 
 freq = 44100
-duration = 5 # in seconds
+duration = 5  # in seconds
 
-print('Recording')
+def sanitize_filename(filename):
+    return re.sub(r'[\/:*?"<>|]', '_', filename)
 
-while True:
+def record_audio():
     ts = datetime.datetime.now()
-    filename = ts.strftime("%Y-%m-%d %H:%M:%S")
+    filename = ts.strftime("%Y-%m-%d-%H_%M_%S")
+    compFile = "./recordings/" + sanitize_filename(filename) + ".wav"
 
-    # Start recorder with the given values of duration and sample frequency
-    # PTL Note: I had to change the channels value in the original code to fix a bug
-    recording = sd.rec(int(duration * freq), samplerate=freq, channels=1)
-
-    # Record audio for the given number of seconds
+    recording = sd.rec(int(duration * freq), samplerate=freq, channels=1, dtype='int16')
     sd.wait()
 
-    # Convert the NumPy array to audio file
-    wv.write(f"./recordings/{filename}.wav", recording, freq, sampwidth=2)
+    wavfile.write(compFile, freq, recording.astype(np.int16))
+    return compFile
